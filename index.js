@@ -1,4 +1,6 @@
 const request = require('request');
+const io = require('socket.io-client');
+
 let Service, Characteristic, TargetDoorState, CurrentDoorState;
 
 module.exports = function(homebridge) {
@@ -18,7 +20,15 @@ class GarageDoorOpener {
     this.currentDoorState = CurrentDoorState.CLOSED;
     this.targetDoorState = TargetDoorState.CLOSED;
 
-    setTimeout(this.monitorDoorState.bind(this), 5000);
+    //setTimeout(this.monitorDoorState.bind(this), 5000);
+    this.socket = io('http://garagepi.helentobias.se');
+                  
+    this.socket.on('status', (message) => {
+      this.log(message);
+      let state = message.status.garage==='open'?CurrentDoorState.OPEN:CurrentDoorState.CLOSED;
+      this.service.setCharacteristic(CurrentDoorState, state);
+      this.service.setCharacteristic(TargetDoorState, state);
+    });
 
   }
   
@@ -28,6 +38,7 @@ class GarageDoorOpener {
   }
   
   openCloseGarage(callback) {
+    this.socket.emit('run', {start:'running'});
     callback();
   }
   
@@ -105,7 +116,6 @@ class GarageDoorOpener {
     })
     .on('set', (value, callback) => {
       this.currentDoorState = value;
-      this.log('current', this.currentDoorState);
       if (this.currentDoorState === CurrentDoorState.OPENING) {
         clearTimeout(this.openCloseTimer);
         this.doorOpenStartTime = new Date();
