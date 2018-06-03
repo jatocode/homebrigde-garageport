@@ -32,9 +32,21 @@ class GarageDoorOpener {
   }
   
   monitorDoorState() {
-    this.log('Checking state');
-    this.service.setCharacteristic(CurrentDoorState, CurrentDoorState.OPEN?CurrentDoorState.CLOSED:CurrentDoorState.OPEN);
-    this.service.setCharacteristic(TargetDoorState, CurrentDoorState.OPEN?CurrentDoorState.CLOSED:CurrentDoorState.OPEN);
+    const me = this;
+    request({
+        url: 'http://hemma.helentobias.se/api/status',
+        json: true,
+        method: 'GET',
+    }, 
+    function (error, response, body) {
+      if (error) {
+        me.log(error.message);
+      }
+      let state = body.garagedoor==='open'?CurrentDoorState.OPEN:CurrentDoorState.CLOSED;
+      me.service.setCharacteristic(CurrentDoorState, state);
+      me.service.setCharacteristic(TargetDoorState, state);
+    });
+    
     setTimeout(this.monitorDoorState.bind(this), 5000);
 
   }
