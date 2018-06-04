@@ -32,6 +32,8 @@ class GarageDoorOpener {
         this.log("Connected to " + url);
     });
 
+    setInterval(() => this.socket.emit('status'), 1000);
+
   }
   
   identify(callback) {
