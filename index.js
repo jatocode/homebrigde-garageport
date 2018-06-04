@@ -1,6 +1,7 @@
 const request = require('request');
 const io = require('socket.io-client');
-
+const url = 'http://192.168.0.22:4000';
+//const url = 'http://garagepi.helentobias.se';
 let Service, Characteristic, TargetDoorState, CurrentDoorState;
 
 module.exports = function(homebridge) {
@@ -8,26 +9,27 @@ module.exports = function(homebridge) {
   Characteristic = homebridge.hap.Characteristic;
   TargetDoorState = Characteristic.TargetDoorState;
   CurrentDoorState = Characteristic.CurrentDoorState;
-  homebridge.registerAccessory("homebridge-testplugin", "testplugin", GarageDoorOpener);
+  homebridge.registerAccessory("homebridge-garageport", "garageport", GarageDoorOpener);
 };
 
 class GarageDoorOpener {
   constructor(log, config) {
     this.log = log;
     this.name = config.name;
-    this.openCloseTime = 500;
+    this.openCloseTime = 50;
     
     this.currentDoorState = CurrentDoorState.CLOSED;
     this.targetDoorState = TargetDoorState.CLOSED;
 
-    //setTimeout(this.monitorDoorState.bind(this), 5000);
-    this.socket = io('http://garagepi.helentobias.se');
+    this.socket = io(url);
                   
     this.socket.on('status', (message) => {
-      this.log(message);
       let state = message.status.garage==='open'?CurrentDoorState.OPEN:CurrentDoorState.CLOSED;
       this.service.setCharacteristic(CurrentDoorState, state);
-      this.service.setCharacteristic(TargetDoorState, state);
+    });
+
+    this.socket.on('connect', (message) => {
+        this.log("Connected to " + url);
     });
 
   }
@@ -40,26 +42,6 @@ class GarageDoorOpener {
   openCloseGarage(callback) {
     this.socket.emit('run', {start:'running'});
     callback();
-  }
-  
-  monitorDoorState() {
-    const me = this;
-    request({
-        url: 'http://hemma.helentobias.se/api/status',
-        json: true,
-        method: 'GET',
-    }, 
-    function (error, response, body) {
-      if (error) {
-        me.log(error.message);
-      }
-      let state = body.garagedoor==='open'?CurrentDoorState.OPEN:CurrentDoorState.CLOSED;
-      me.service.setCharacteristic(CurrentDoorState, state);
-      me.service.setCharacteristic(TargetDoorState, state);
-    });
-    
-    setTimeout(this.monitorDoorState.bind(this), 5000);
-
   }
 
   getServices() {
@@ -97,8 +79,7 @@ class GarageDoorOpener {
           // Do nothing
         } else if (this.currentDoorState === CurrentDoorState.OPENING) {
           this.openCloseGarage(() =>
-          this.openCloseGarage(() =>
-          this.service.setCharacteristic(CurrentDoorState, CurrentDoorState.CLOSING)));
+          this.service.setCharacteristic(CurrentDoorState, CurrentDoorState.CLOSING));
           // Do nothing
         } else if (this.currentDoorState === CurrentDoorState.CLOSING) {
           // Do nothing
@@ -116,6 +97,7 @@ class GarageDoorOpener {
     })
     .on('set', (value, callback) => {
       this.currentDoorState = value;
+      
       if (this.currentDoorState === CurrentDoorState.OPENING) {
         clearTimeout(this.openCloseTimer);
         this.doorOpenStartTime = new Date();
@@ -139,6 +121,7 @@ class GarageDoorOpener {
           this.service.setCharacteristic(CurrentDoorState, CurrentDoorState.CLOSED);
         }, stateChangeTimer);
       }
+      
       callback();
     });
     
