@@ -1,6 +1,6 @@
 {
-  "name": "homebridge-testplugin",
-  "version": "1.0.0",
+  "name": "homebridge-garageport",
+  "version": "1.3.0",
   "description": "",
   "main": "index.js",
   "keywords": [
