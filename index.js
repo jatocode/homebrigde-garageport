@@ -24,7 +24,6 @@ class GarageDoorOpener {
                   
     this.socket.on('status', (message) => {
       let state = message.status.garage==='open'?CurrentDoorState.OPEN:CurrentDoorState.CLOSED;
-      this.log('Got status:' + state);
       this.service.setCharacteristic(CurrentDoorState, state);
     });
 
@@ -59,12 +58,10 @@ class GarageDoorOpener {
     
     this.service.getCharacteristic(TargetDoorState)
     .on('get', (callback) => {
-      this.log('get tds:' + this.targetDoorState);
       callback(null, this.targetDoorState);
     })
     .on('set', (value, callback) => {
       this.targetDoorState = value;
-      this.log('set tds:' + this.targetDoorState);
       if (this.targetDoorState === TargetDoorState.OPEN &&
           this.currentDoorState === CurrentDoorState.CLOSED) {
           this.openCloseGarage(); 
@@ -77,11 +74,9 @@ class GarageDoorOpener {
     
     this.service.getCharacteristic(CurrentDoorState)
     .on('get', (callback) => {
-      this.log('get cds:' + this.currentDoorState);
       callback(null, this.currentDoorState);
     })
     .on('set', (value, callback) => {
-      this.log('set cds:' + this.currentDoorState);
       this.currentDoorState = value;
       callback();
     });
