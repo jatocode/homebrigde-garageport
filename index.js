@@ -1,7 +1,5 @@
 const request = require('request');
 const io = require('socket.io-client');
-//const url = 'http://192.168.0.22:4000';
-const url = 'http://garagepi.helentobias.se';
 let Service, Characteristic, TargetDoorState, CurrentDoorState;
 
 module.exports = function(homebridge) {
@@ -16,11 +14,12 @@ class GarageDoorOpener {
   constructor(log, config) {
     this.log = log;
     this.name = config.name;
+    this.url = config.url;
     
     this.currentDoorState = CurrentDoorState.CLOSED;
     this.targetDoorState = TargetDoorState.CLOSED;
 
-    this.socket = io(url);
+    this.socket = io(this.url);
                   
     this.socket.on('status', (message) => {
       let state = message.status.garage==='open'?CurrentDoorState.OPEN:CurrentDoorState.CLOSED;
@@ -28,7 +27,7 @@ class GarageDoorOpener {
     });
 
     this.socket.on('connect', (message) => {
-        this.log("Connected to " + url);
+        this.log("Connected to " + this.url);
     });
 
     setInterval(() => this.socket.emit('status'), 1000);
