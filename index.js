@@ -68,7 +68,7 @@ class GarageDoorOpener {
       const connection = mysql.createConnection({
         host: 'localhost',
         user: 'tobias',
-        password: 'vol144vo',
+        password: '',
         database: 'hs'
       });
       return {
@@ -93,7 +93,7 @@ class GarageDoorOpener {
 
   openCloseGarage() {
     console.log('websocket request to impulse motor. Publishing to mqtt');
-    //   mqtt.publish('garage/esp32/in', 'G', { qos: 0, retain: false });
+    mqtt.publish('garage/esp32/in', 'G', { qos: 0, retain: false });
 
   }
 
