@@ -1,9 +1,11 @@
-const request = require('request');
 const mqttjs = require('mqtt');
+const mysql = require('mysql');
+const util = require('util');
 const io = require('socket.io-client');
 let Service, Characteristic, TargetDoorState, CurrentDoorState;
 
 let mqtt;
+let db;
 
 module.exports = function (homebridge) {
   Service = homebridge.hap.Service;
@@ -62,6 +64,26 @@ class GarageDoorOpener {
 
     setInterval(() => this.socket.emit('status'), 1000);
 
+    let makeDb = function makeDb() {
+      const connection = mysql.createConnection({
+        host: 'localhost',
+        user: 'tobias',
+        password: 'vol144vo',
+        database: 'hs'
+      });
+      return {
+        query(sql, args) {
+          return util.promisify(connection.query)
+            .call(connection, sql, args);
+        },
+        close() {
+          return util.promisify(connection.end).call(connection);
+        }
+      };
+    }
+
+    db = makeDb();
+
   }
 
   identify(callback) {
@@ -73,6 +95,17 @@ class GarageDoorOpener {
     console.log('websocket request to impulse motor. Publishing to mqtt');
     //   mqtt.publish('garage/esp32/in', 'G', { qos: 0, retain: false });
 
+  }
+
+  async getGarageState(db) {
+    const query = `SELECT status,timestamp from garage ORDER BY timestamp DESC LIMIT 1`;
+    try {
+      const result = await db.query(query);
+      return result.map(r => { return { state: r.status, timestamp: r.timestamp } })[0];
+    } catch (err) {
+      console.log(err);
+      return 'NO DB';
+    }
   }
 
   getServices() {
@@ -104,8 +137,10 @@ class GarageDoorOpener {
       });
 
     this.service.getCharacteristic(CurrentDoorState)
-      .on('get', (callback) => {
-        console.log('getting status');
+      .on('get', async (callback) => {
+        const garage = await this.getGarageState(db);
+        console.log('From DB: ' + garage.state);
+        this.currentDoorState = garage.state == 0 ? CurrentDoorState.CLOSED : CurrentDoorState.OPEN;
         callback(null, this.currentDoorState);
       })
       .on('set', (value, callback) => {
